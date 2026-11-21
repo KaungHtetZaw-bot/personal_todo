@@ -1,4 +1,4 @@
-import { ComponentRef, useCallback, useRef, useState } from "react";
+import { ComponentRef, useCallback, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -10,27 +10,54 @@ import {
   View,
 } from "react-native";
 
-import { useTodos, type Todo } from "@/hooks/use-todos";
-import { Spacing, useTheme } from "@/theme";
+import { SectionLabel } from "@/components/section-label";
+import { useTodos, type ListId, type Todo } from "@/hooks/use-todos";
+import { boxShadow, Spacing, typeStyle, useDesign, useTheme } from "@/theme";
 import { useFocusEffect } from "expo-router";
+
+type ListEntry =
+  | { kind: "header"; key: string; label: string }
+  | { kind: "todo"; key: string; todo: Todo };
 
 type TodoRowProps = {
   todo: Todo;
   onToggle: (id: string) => void;
   onRemove: (id: string) => void;
+  showSeparator: boolean;
 };
 
-function TodoRow({ todo, onToggle, onRemove }: TodoRowProps) {
+function TodoRow({ todo, onToggle, onRemove, showSeparator }: TodoRowProps) {
   const theme = useTheme();
+  const { tokens } = useDesign();
+  const item = tokens.item;
+  const box = tokens.checkbox;
+  const isCard = item.style === "card";
+
+  const checkRadius =
+    box.shape === "circle" ? box.size / 2 : box.shape === "rounded" ? box.size * 0.32 : 3;
+
   return (
     <View
       style={[
         styles.row,
-        {
-          backgroundColor: theme.surface,
-          borderColor: theme.border,
-          boxShadow: `3px 3px 0px ${theme.shadow}`,
-        },
+        isCard
+          ? {
+              backgroundColor: theme.surface,
+              borderColor: theme.border,
+              borderWidth: item.borderWidth,
+              borderRadius: item.radius,
+              paddingVertical: item.paddingV,
+              paddingHorizontal: item.paddingH,
+              gap: item.gap,
+              boxShadow: boxShadow(item.shadow, theme.shadow),
+            }
+          : {
+              paddingVertical: item.paddingV,
+              paddingHorizontal: item.paddingH,
+              gap: item.gap,
+              borderBottomWidth: showSeparator ? 1 : 0,
+              borderBottomColor: theme.border,
+            },
       ]}
     >
       <Pressable
@@ -43,15 +70,37 @@ function TodoRow({ todo, onToggle, onRemove }: TodoRowProps) {
         <View
           style={[
             styles.checkbox,
-            { borderColor: theme.border },
-            todo.done && { backgroundColor: theme.accent },
+            {
+              width: box.size,
+              height: box.size,
+              borderRadius: checkRadius,
+              borderWidth: box.borderWidth,
+              borderColor: theme.border,
+            },
+            todo.done && {
+              backgroundColor: theme.accent,
+              borderColor: theme.accent,
+            },
           ]}
         >
-          {todo.done && <Text style={styles.checkmark}>✓</Text>}
+          {todo.done && (
+            <Text
+              style={[
+                styles.checkmark,
+                {
+                  color: theme.onAccent,
+                  fontSize: box.checkSize,
+                  lineHeight: box.checkSize + 3,
+                },
+              ]}
+            >
+              ✓
+            </Text>
+          )}
         </View>
         <Text
           style={[
-            styles.rowText,
+            typeStyle(item.text),
             { color: todo.done ? theme.textMuted : theme.text },
             todo.done && styles.doneText,
           ]}
@@ -78,9 +127,15 @@ function TodoRow({ todo, onToggle, onRemove }: TodoRowProps) {
   );
 }
 
-export function TodoList() {
+type TodoListProps = {
+  /** Which tab's list this component edits. Defaults to 'home'. */
+  list?: ListId;
+};
+
+export function TodoList({ list = "home" }: TodoListProps) {
   const theme = useTheme();
-  const { todos, addTodo, toggleTodo, removeTodo, clearDone } = useTodos();
+  const { tokens } = useDesign();
+  const { todos, addTodo, toggleTodo, removeTodo, clearDone } = useTodos(list);
   const [draft, setDraft] = useState("");
 
   const canAdd = draft.trim().length > 0;
@@ -95,7 +150,6 @@ export function TodoList() {
   const remaining = todos.filter((todo) => !todo.done).length;
   const hasDone = remaining < todos.length;
 
-  // const inputRef = useRef<TextInput>(null);
   const inputRef = useRef<ComponentRef<typeof TextInput>>(null);
 
   useFocusEffect(
@@ -110,6 +164,37 @@ export function TodoList() {
     }, []),
   );
 
+  const listData = useMemo<ListEntry[]>(() => {
+    if (!tokens.header.sections) {
+      return todos.map((todo) => ({ kind: "todo" as const, key: todo.id, todo }));
+    }
+
+    const active = todos.filter((todo) => !todo.done);
+    const finished = todos.filter((todo) => todo.done);
+    const entries: ListEntry[] = [];
+
+    if (active.length > 0) {
+      entries.push({ kind: "header", key: "header-active", label: "Today" });
+      active.forEach((todo) => entries.push({ kind: "todo", key: todo.id, todo }));
+    }
+    if (finished.length > 0) {
+      entries.push({ kind: "header", key: "header-done", label: "Done" });
+      finished.forEach((todo) => entries.push({ kind: "todo", key: todo.id, todo }));
+    }
+    return entries;
+  }, [todos, tokens.header.sections]);
+
+  const add = tokens.add;
+  const isHairline = add.style === "hairline";
+  const inputSize = add.style === "slim" ? 14 : 15;
+  const footer = tokens.footer;
+  const footerText = {
+    fontSize: footer.size,
+    lineHeight: footer.size + 5,
+    fontWeight: footer.weight,
+    textTransform: (footer.uppercase ? "uppercase" : "none") as "uppercase" | "none",
+  };
+
   return (
     <KeyboardAvoidingView
       style={styles.flex}
@@ -118,11 +203,23 @@ export function TodoList() {
       <View
         style={[
           styles.addRow,
-          {
-            backgroundColor: theme.surface,
-            borderColor: theme.border,
-            boxShadow: `4px 4px 0px ${theme.shadow}`,
-          },
+          isHairline
+            ? {
+                borderBottomWidth: 1,
+                borderBottomColor: theme.border,
+                paddingVertical: Spacing.two,
+              }
+            : {
+                backgroundColor: theme.surface,
+                borderColor: theme.border,
+                borderWidth: add.borderWidth,
+                borderRadius: add.radius,
+                paddingVertical: add.style === "pill" ? 6 : Spacing.one,
+                paddingLeft:
+                  add.style === "pill" ? Spacing.four : Spacing.three,
+                paddingRight: add.style === "pill" ? 6 : Spacing.one,
+                boxShadow: boxShadow(add.shadow, theme.shadow),
+              },
         ]}
       >
         <TextInput
@@ -133,31 +230,92 @@ export function TodoList() {
           placeholder='Add a task…'
           placeholderTextColor={theme.textSecondary}
           returnKeyType='done'
-          style={[styles.input, { color: theme.text }]}
-        />
-        <Pressable
-          accessibilityRole='button'
-          accessibilityLabel='Add todo'
-          onPress={submit}
-          disabled={!canAdd}
-          style={({ pressed }) => [
-            styles.submitButton,
-            { backgroundColor: theme.plus, borderColor: theme.border },
-            !canAdd && styles.submitDisabled,
-            pressed && styles.pressed,
+          style={[
+            styles.input,
+            {
+              color: theme.text,
+              fontSize: inputSize,
+              lineHeight: inputSize + 7,
+              fontWeight: add.inputWeight,
+            },
           ]}
-        >
-          <Text style={styles.submitGlyph}>+</Text>
-        </Pressable>
+        />
+        {isHairline ? (
+          <Pressable
+            accessibilityRole='button'
+            accessibilityLabel='Add todo'
+            onPress={submit}
+            disabled={!canAdd}
+            style={({ pressed }) => [pressed && styles.pressed]}
+          >
+            <Text
+              style={[
+                styles.addText,
+                { color: canAdd ? theme.accent : theme.textMuted },
+              ]}
+            >
+              Add
+            </Text>
+          </Pressable>
+        ) : (
+          <Pressable
+            accessibilityRole='button'
+            accessibilityLabel='Add todo'
+            onPress={submit}
+            disabled={!canAdd}
+            style={({ pressed }) => [
+              styles.submitButton,
+              {
+                width: add.buttonSize,
+                height: add.buttonSize,
+                borderRadius: add.buttonRadius,
+                borderWidth: add.buttonBorderWidth,
+                borderColor: theme.border,
+                backgroundColor: theme.plus,
+              },
+              !canAdd && styles.submitDisabled,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text
+              style={[
+                styles.submitGlyph,
+                {
+                  color: theme.onPlus,
+                  fontSize: Math.round(add.buttonSize * 0.58),
+                  lineHeight: Math.round(add.buttonSize * 0.58) + 3,
+                },
+              ]}
+            >
+              +
+            </Text>
+          </Pressable>
+        )}
       </View>
 
       <FlatList
-        data={todos}
-        keyExtractor={(todo) => todo.id}
-        renderItem={({ item }) => (
-          <TodoRow todo={item} onToggle={toggleTodo} onRemove={removeTodo} />
-        )}
-        contentContainerStyle={styles.listContent}
+        data={listData}
+        keyExtractor={(entry) => entry.key}
+        renderItem={({ item, index }) => {
+          if (item.kind === "header") {
+            return <SectionLabel>{item.label}</SectionLabel>;
+          }
+          const next = listData[index + 1];
+          const showSeparator =
+            tokens.item.style === "row" && next?.kind === "todo";
+          return (
+            <TodoRow
+              todo={item.todo}
+              onToggle={toggleTodo}
+              onRemove={removeTodo}
+              showSeparator={showSeparator}
+            />
+          );
+        }}
+        contentContainerStyle={[
+          styles.listContent,
+          { gap: tokens.item.listGap },
+        ]}
         keyboardShouldPersistTaps='handled'
         ListEmptyComponent={
           <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
@@ -167,24 +325,56 @@ export function TodoList() {
       />
 
       <View style={styles.footer}>
-        <View style={[styles.tag, { backgroundColor: theme.tagBg }]}>
-          <Text style={[styles.tagText, { color: theme.tagText }]}>
-            {remaining} {remaining === 1 ? "task" : "tasks"} left
-          </Text>
-        </View>
-        {hasDone && (
-          <Pressable
-            accessibilityRole='button'
-            accessibilityLabel='Clear completed todos'
-            onPress={clearDone}
-            style={({ pressed }) => pressed && styles.pressed}
-          >
-            <View style={[styles.tag, { backgroundColor: theme.plus }]}>
-              <Text style={[styles.tagText, { color: "#101010" }]}>
-                Clear done
+        {footer.style === "tag" ? (
+          <>
+            <View
+              style={[
+                styles.tag,
+                { backgroundColor: theme.tagBg, borderRadius: footer.radius },
+              ]}
+            >
+              <Text style={[footerText, { color: theme.tagText }]}>
+                {remaining} {remaining === 1 ? "task" : "tasks"} left
               </Text>
             </View>
-          </Pressable>
+            {hasDone && (
+              <Pressable
+                accessibilityRole='button'
+                accessibilityLabel='Clear completed todos'
+                onPress={clearDone}
+                style={({ pressed }) => pressed && styles.pressed}
+              >
+                <View
+                  style={[
+                    styles.tag,
+                    { backgroundColor: theme.plus, borderRadius: footer.radius },
+                  ]}
+                >
+                  <Text style={[footerText, { color: theme.onPlus }]}>
+                    Clear done
+                  </Text>
+                </View>
+              </Pressable>
+            )}
+          </>
+        ) : (
+          <>
+            <Text style={[footerText, { color: theme.textSecondary }]}>
+              {remaining} {remaining === 1 ? "task" : "tasks"} left
+            </Text>
+            {hasDone && (
+              <Pressable
+                accessibilityRole='button'
+                accessibilityLabel='Clear completed todos'
+                onPress={clearDone}
+                style={({ pressed }) => pressed && styles.pressed}
+              >
+                <Text style={[footerText, { color: theme.accent }]}>
+                  Clear done
+                </Text>
+              </Pressable>
+            )}
+          </>
         )}
       </View>
     </KeyboardAvoidingView>
@@ -199,26 +389,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.two,
-    borderWidth: 3,
-    borderRadius: 14,
-    paddingLeft: Spacing.three,
-    paddingRight: Spacing.one,
-    paddingVertical: Spacing.one,
   },
   input: {
     flex: 1,
-    fontSize: 15,
-    lineHeight: 22,
-    fontWeight: "700",
     paddingVertical: Spacing.two,
     backgroundColor: "transparent",
     borderWidth: 0,
   },
+  addText: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "700",
+    paddingHorizontal: Spacing.two,
+    paddingVertical: Spacing.two,
+  },
   submitButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 9,
-    borderWidth: 3,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -226,25 +411,16 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
   submitGlyph: {
-    color: "#101010",
-    fontSize: 20,
     fontWeight: "900",
-    lineHeight: 22,
   },
   listContent: {
     flexGrow: 1,
-    gap: 12,
     paddingTop: Spacing.three,
     paddingBottom: Spacing.three,
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: Spacing.two,
-    borderWidth: 3,
-    borderRadius: 14,
-    paddingVertical: Spacing.two + Spacing.half,
-    paddingHorizontal: Spacing.three,
   },
   rowMain: {
     flex: 1,
@@ -256,24 +432,11 @@ const styles = StyleSheet.create({
     opacity: 0.65,
   },
   checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 8,
-    borderWidth: 3,
     alignItems: "center",
     justifyContent: "center",
   },
   checkmark: {
-    color: "#101010",
-    fontSize: 14,
     fontWeight: "900",
-    lineHeight: 16,
-  },
-  rowText: {
-    flex: 1,
-    fontSize: 15.5,
-    lineHeight: 22,
-    fontWeight: "800",
   },
   doneText: {
     textDecorationLine: "line-through",
@@ -300,14 +463,7 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.one,
   },
   tag: {
-    borderRadius: 7,
     paddingVertical: 6,
     paddingHorizontal: 11,
-  },
-  tagText: {
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: "800",
-    textTransform: "uppercase",
   },
 });
