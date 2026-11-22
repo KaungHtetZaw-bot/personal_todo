@@ -1,4 +1,5 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
+import { SQLiteProvider } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet } from 'react-native';
 
@@ -6,16 +7,19 @@ import AppTabs from '@/components/app-tabs';
 import { CategoriesProvider } from '@/hooks/use-categories';
 import { TodosProvider } from '@/hooks/use-todos';
 import { DesignProvider, useDesign } from '@/theme';
+import { migrateDbIfNeeded } from '@/db';
 
 export default function RootLayout() {
   return (
-    <DesignProvider>
-      <TodosProvider>
-        <CategoriesProvider>
-          <ThemedApp />
-        </CategoriesProvider>
-      </TodosProvider>
-    </DesignProvider>
+    <SQLiteProvider databaseName='todo.db' onInit={migrateDbIfNeeded}>
+      <DesignProvider>
+        <TodosProvider>
+          <CategoriesProvider>
+            <ThemedApp />
+          </CategoriesProvider>
+        </TodosProvider>
+      </DesignProvider>
+    </SQLiteProvider>
   );
 }
 
