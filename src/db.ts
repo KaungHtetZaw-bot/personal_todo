@@ -104,6 +104,18 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
       installed_at INTEGER NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS resource_files (
+      id TEXT PRIMARY KEY NOT NULL,
+      resource_type TEXT NOT NULL,
+      resource_id TEXT NOT NULL,
+      file_name TEXT NOT NULL,
+      mime_type TEXT NOT NULL,
+      remote_url TEXT,
+      local_path TEXT,
+      size INTEGER,
+      checksum TEXT
+    );
+
     CREATE INDEX IF NOT EXISTS idx_todos_list ON todos(list);
     CREATE INDEX IF NOT EXISTS idx_learn_categories_path ON learn_categories(path_id);
     CREATE INDEX IF NOT EXISTS idx_learn_items_category ON learn_items(category_id);

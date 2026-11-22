@@ -1,33 +1,12 @@
 [
   {
-    "id": "book-atomic-habits",
-    "title": "Atomic Habits",
-    "author": "James Clear",
-    "status": "reading",
-    "progress": 68,
-    "total_pages": 320,
-    "notes": "Chapter 12 of 17"
-  },
-  {
-    "id": "book-deep-work",
-    "title": "Deep Work",
-    "author": "Cal Newport",
+    "id": "book-linkadipa-chitthu",
+    "title": "လင်္ကာဒီပချစ်သူ",
+    "author": "ချစ်ဦးညို",
     "status": "saved",
-    "total_pages": 304
-  },
-  {
-    "id": "book-creative-act",
-    "title": "The Creative Act",
-    "author": "Rick Rubin",
-    "status": "saved",
-    "total_pages": 432
-  },
-  {
-    "id": "book-alchemist",
-    "title": "The Alchemist",
-    "author": "Paulo Coelho",
-    "status": "finished",
-    "progress": 100,
-    "notes": "Finished recently"
+    "progress": 0,
+    "file_name": "books/လင်္ကာဒီပချစ်သူ.pdf",
+    "mime_type": "application/pdf",
+    "file_url": "https://raw.githubusercontent.com/KaungHtetZaw-bot/personal_todo/main/resources/v1/books/%E1%80%9C%E1%80%84%E1%80%BA%E1%80%B9%E1%80%80%E1%80%AC%E1%80%92%E1%80%AE%E1%80%95%E1%80%81%E1%80%BB%E1%80%85%E1%80%BA%E1%80%9E%E1%80%B0.pdf"
   }
 ]

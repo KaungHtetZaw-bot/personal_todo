@@ -41,7 +41,12 @@ type ResourcePack = {
     progress?: number;
     total_pages?: number;
     cover_url?: string;
+    cover_file_name?: string;
+    cover_mime_type?: string;
     notes?: string;
+    file_name?: string;
+    mime_type?: string;
+    file_url?: string;
   }[];
   workoutRoutines: { id: string; name: string; description?: string; duration_minutes?: number }[];
   exercises: { id: string; name: string; muscle_group?: string; instructions?: string }[];
@@ -78,6 +83,42 @@ export async function syncResourcePack(db: SQLiteDatabase): Promise<number | nul
     routineExercises: await downloadJson(manifest.files.routineExercises, "routine-exercises.json", packDirectory),
   };
 
+  const downloadedFiles: {
+    id: string;
+    resourceType: string;
+    resourceId: string;
+    fileName: string;
+    mimeType: string;
+    remoteUrl: string;
+    localPath: string;
+    size: number | null;
+  }[] = [];
+
+  for (const book of pack.books) {
+    if (book.file_url && book.file_name) {
+      downloadedFiles.push(await downloadResourceFile({
+        id: `file-${book.id}`,
+        resourceType: "book",
+        resourceId: book.id,
+        fileName: book.file_name,
+        mimeType: book.mime_type ?? "application/octet-stream",
+        remoteUrl: book.file_url,
+        packDirectory,
+      }));
+    }
+    if (book.cover_url) {
+      downloadedFiles.push(await downloadResourceFile({
+        id: `cover-${book.id}`,
+        resourceType: "book_cover",
+        resourceId: book.id,
+        fileName: book.cover_file_name ?? `books/covers/${book.id}.jpg`,
+        mimeType: book.cover_mime_type ?? "image/jpeg",
+        remoteUrl: book.cover_url,
+        packDirectory,
+      }));
+    }
+  }
+
   await db.withTransactionAsync(async () => {
     for (const row of pack.learnPaths) {
       await db.runAsync("INSERT OR REPLACE INTO learn_paths (id, name, description) VALUES (?, ?, ?)", row.id, row.name, row.description ?? null);
@@ -100,6 +141,19 @@ export async function syncResourcePack(db: SQLiteDatabase): Promise<number | nul
     for (const row of pack.routineExercises) {
       await db.runAsync("INSERT OR REPLACE INTO routine_exercises (routine_id, exercise_id, position, sets, reps, duration_seconds) VALUES (?, ?, ?, ?, ?, ?)", row.routine_id, row.exercise_id, row.position ?? 0, row.sets ?? null, row.reps ?? null, row.duration_seconds ?? null);
     }
+    for (const file of downloadedFiles) {
+      await db.runAsync(
+        "INSERT OR REPLACE INTO resource_files (id, resource_type, resource_id, file_name, mime_type, remote_url, local_path, size) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        file.id,
+        file.resourceType,
+        file.resourceId,
+        file.fileName,
+        file.mimeType,
+        file.remoteUrl,
+        file.localPath,
+        file.size,
+      );
+    }
     await db.runAsync("INSERT OR REPLACE INTO resource_packs (id, version, local_path, checksum, installed_at) VALUES (?, ?, ?, ?, ?)", `resources-v${manifest.version}`, manifest.version, packDirectory, manifest.checksum ?? null, Date.now());
   });
 
@@ -112,4 +166,30 @@ async function downloadJson<T>(url: string, fileName: string, directory = FileSy
   await FileSystem.downloadAsync(url, destination);
   const content = await FileSystem.readAsStringAsync(destination);
   return JSON.parse(content) as T;
+}
+
+async function downloadResourceFile(input: {
+  id: string;
+  resourceType: string;
+  resourceId: string;
+  fileName: string;
+  mimeType: string;
+  remoteUrl: string;
+  packDirectory: string;
+}) {
+  const localPath = `${input.packDirectory}${input.fileName}`;
+  const directory = localPath.slice(0, localPath.lastIndexOf("/") + 1);
+  await FileSystem.makeDirectoryAsync(directory, { intermediates: true });
+  const result = await FileSystem.downloadAsync(input.remoteUrl, localPath);
+  const info = await FileSystem.getInfoAsync(result.uri);
+  return {
+    id: input.id,
+    resourceType: input.resourceType,
+    resourceId: input.resourceId,
+    fileName: input.fileName,
+    mimeType: input.mimeType,
+    remoteUrl: input.remoteUrl,
+    localPath: result.uri,
+    size: info.exists && "size" in info ? info.size ?? null : null,
+  };
 }
