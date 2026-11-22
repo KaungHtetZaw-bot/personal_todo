@@ -1,8 +1,10 @@
-import { useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useSQLiteContext } from "expo-sqlite";
 
 import { SectionLabel } from "@/components/section-label";
+import { RESOURCE_MANIFEST_URL, syncResourcePack } from "@/resource-pack";
 import {
   DESIGN_OPTIONS,
   MaxContentWidth,
@@ -335,6 +337,105 @@ function AppearanceRow() {
   );
 }
 
+type ResourcePackRow = {
+  version: number;
+  local_path: string;
+  installed_at: number;
+};
+
+function ResourceStatus() {
+  const theme = useTheme();
+  const { tokens } = useDesign();
+  const db = useSQLiteContext();
+  const [pack, setPack] = useState<ResourcePackRow | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [error, setError] = useState(false);
+
+  const loadStatus = useCallback(async () => {
+    const row = await db.getFirstAsync<ResourcePackRow>(
+      "SELECT version, local_path, installed_at FROM resource_packs ORDER BY version DESC LIMIT 1",
+    );
+    setPack(row ?? null);
+  }, [db]);
+
+  useEffect(() => {
+    let mounted = true;
+    db.getFirstAsync<ResourcePackRow>(
+      "SELECT version, local_path, installed_at FROM resource_packs ORDER BY version DESC LIMIT 1",
+    )
+      .then((row) => {
+        if (mounted) setPack(row ?? null);
+      })
+      .catch(() => {
+        if (mounted) setError(true);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [db]);
+
+  const checkForResources = async () => {
+    setChecking(true);
+    setError(false);
+    try {
+      await syncResourcePack(db);
+      await loadStatus();
+    } catch {
+      setError(true);
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const stateLabel = error
+    ? "Could not check resources"
+    : pack
+      ? `Downloaded · version ${pack.version}`
+      : RESOURCE_MANIFEST_URL
+        ? "Not downloaded yet"
+        : "Not configured";
+
+  return (
+    <View
+      style={[
+        styles.resourceCard,
+        {
+          backgroundColor: theme.surface,
+          borderColor: theme.border,
+          borderRadius: Math.max(tokens.item.radius, 12),
+          borderWidth: Math.max(tokens.item.borderWidth, 1),
+        },
+      ]}
+    >
+      <View style={styles.resourceHeader}>
+        <View style={styles.resourceTitleBlock}>
+          <Text style={[styles.resourceTitle, { color: theme.text }]}>Resource pack</Text>
+          <Text style={[styles.resourceState, { color: error ? theme.accent : theme.textSecondary }]}>
+            {stateLabel}
+          </Text>
+        </View>
+        <Pressable
+          accessibilityRole='button'
+          accessibilityLabel='Check resource pack'
+          disabled={checking || !RESOURCE_MANIFEST_URL}
+          onPress={checkForResources}
+          style={({ pressed }) => [
+            styles.resourceButton,
+            { backgroundColor: theme.tagBg, opacity: !RESOURCE_MANIFEST_URL ? 0.45 : 1 },
+            pressed && styles.pressed,
+          ]}
+        >
+          <Text style={[styles.resourceButtonText, { color: theme.tagText }]}>
+            {checking ? "Checking…" : "Check"}
+          </Text>
+        </Pressable>
+      </View>
+      <Text style={[styles.resourcePath, { color: theme.textMuted }]}>Stored in this app&apos;s private storage</Text>
+      {pack && <Text style={[styles.resourcePath, { color: theme.textMuted }]}>{pack.local_path}</Text>}
+    </View>
+  );
+}
+
 export default function SettingsScreen() {
   const theme = useTheme();
   const { tokens } = useDesign();
@@ -361,6 +462,9 @@ export default function SettingsScreen() {
           <View style={styles.sections}>
             <SectionLabel>Design</SectionLabel>
             <DesignDropdown />
+
+            <SectionLabel>Resources</SectionLabel>
+            <ResourceStatus />
 
             <SectionLabel>Preferences</SectionLabel>
 
@@ -518,5 +622,42 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     alignItems: "center",
     justifyContent: "center",
+  },
+  resourceCard: {
+    padding: Spacing.three,
+    gap: Spacing.two,
+  },
+  resourceHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: Spacing.two,
+  },
+  resourceTitleBlock: {
+    flex: 1,
+    gap: 2,
+  },
+  resourceTitle: {
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: "800",
+  },
+  resourceState: {
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  resourceButton: {
+    borderRadius: 999,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+  },
+  resourceButtonText: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "800",
+  },
+  resourcePath: {
+    fontSize: 10,
+    lineHeight: 14,
   },
 });
