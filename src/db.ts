@@ -96,6 +96,14 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
       FOREIGN KEY (todo_id) REFERENCES todos(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS resource_packs (
+      id TEXT PRIMARY KEY NOT NULL,
+      version INTEGER NOT NULL,
+      local_path TEXT NOT NULL,
+      checksum TEXT,
+      installed_at INTEGER NOT NULL
+    );
+
     CREATE INDEX IF NOT EXISTS idx_todos_list ON todos(list);
     CREATE INDEX IF NOT EXISTS idx_learn_categories_path ON learn_categories(path_id);
     CREATE INDEX IF NOT EXISTS idx_learn_items_category ON learn_items(category_id);

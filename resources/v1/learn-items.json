@@ -1,0 +1,12 @@
+[
+  { "id": "item-english-grammar", "category_id": "category-english", "name": "Grammar & Translation", "type": "video", "position": 0 },
+  { "id": "item-english-vocabulary", "category_id": "category-english", "name": "Vocabulary", "type": "video", "position": 1 },
+  { "id": "item-english-speaking", "category_id": "category-english", "name": "Phonetics & Basic English Speaking", "type": "video", "position": 2 },
+  { "id": "item-japan-grammar", "category_id": "category-japan", "name": "Grammar & Translation", "type": "video", "position": 0 },
+  { "id": "item-japan-vocabulary", "category_id": "category-japan", "name": "Vocabulary", "type": "video", "position": 1 },
+  { "id": "item-japan-speaking", "category_id": "category-japan", "name": "Phonetics & Basic English Speaking", "type": "video", "position": 2 },
+  { "id": "item-korean-grammar", "category_id": "category-korean", "name": "Grammar & Translation", "type": "video", "position": 0 },
+  { "id": "item-korean-vocabulary", "category_id": "category-korean", "name": "Vocabulary", "type": "video", "position": 1 },
+  { "id": "item-korean-speaking", "category_id": "category-korean", "name": "Phonetics & Basic English Speaking", "type": "video", "position": 2 },
+  { "id": "item-kotlin", "category_id": "category-mobile", "name": "Kotlin", "type": "note", "position": 0 }
+]

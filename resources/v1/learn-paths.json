@@ -1,0 +1,12 @@
+[
+  {
+    "id": "path-international-language",
+    "name": "International Language",
+    "description": "Build practical language skills."
+  },
+  {
+    "id": "path-programming-language",
+    "name": "Programming Language",
+    "description": "Learn tools and concepts for building software."
+  }
+]

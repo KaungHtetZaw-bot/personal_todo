@@ -3,7 +3,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CategoryTree, InlineAddRow } from "@/components/category-tree";
 import { useCategories, type CategoryNode } from "@/hooks/use-categories";
-import { MaxContentWidth, Spacing, typeStyle, useDesign, useTheme } from "@/theme";
+import {
+  MaxContentWidth,
+  Spacing,
+  typeStyle,
+  useDesign,
+  useTheme,
+} from "@/theme";
 
 export default function LearnScreen() {
   const theme = useTheme();
@@ -16,12 +22,11 @@ export default function LearnScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <SafeAreaView style={styles.safeArea}>
-        <ScrollView
-          style={styles.scroll}
-          keyboardShouldPersistTaps='handled'
-        >
+        <ScrollView style={styles.scroll} keyboardShouldPersistTaps='handled'>
           <View style={styles.header}>
-            <Text style={[typeStyle(tokens.title), { color: theme.text }]}>Learn</Text>
+            <Text style={[typeStyle(tokens.title), { color: theme.text }]}>
+              Learn
+            </Text>
             <Text
               style={[
                 typeStyle(tokens.subtitle),
@@ -39,24 +44,46 @@ export default function LearnScreen() {
             ]}
           >
             <View>
-              <Text style={[styles.overviewEyebrow, { color: theme.textMuted }]}>YOUR LIBRARY</Text>
-              <Text style={[styles.overviewTitle, { color: theme.text }]}>Keep learning in small steps.</Text>
+              <Text
+                style={[styles.overviewEyebrow, { color: theme.textMuted }]}
+              >
+                YOUR LIBRARY
+              </Text>
+              <Text style={[styles.overviewTitle, { color: theme.text }]}>
+                Keep learning in small steps.
+              </Text>
             </View>
             <View style={styles.stats}>
               <View style={styles.stat}>
-                <Text style={[styles.statValue, { color: theme.text }]}>{categoryCount}</Text>
-                <Text style={[styles.statLabel, { color: theme.textSecondary }]}>paths</Text>
+                <Text style={[styles.statValue, { color: theme.text }]}>
+                  {categoryCount}
+                </Text>
+                <Text
+                  style={[styles.statLabel, { color: theme.textSecondary }]}
+                >
+                  paths
+                </Text>
               </View>
-              <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
+              <View
+                style={[styles.statDivider, { backgroundColor: theme.border }]}
+              />
               <View style={styles.stat}>
-                <Text style={[styles.statValue, { color: theme.text }]}>{topicCount}</Text>
-                <Text style={[styles.statLabel, { color: theme.textSecondary }]}>topics</Text>
+                <Text style={[styles.statValue, { color: theme.text }]}>
+                  {topicCount}
+                </Text>
+                <Text
+                  style={[styles.statLabel, { color: theme.textSecondary }]}
+                >
+                  topics
+                </Text>
               </View>
             </View>
           </View>
 
           <View style={styles.actionRow}>
-            <Text style={[styles.sectionHint, { color: theme.textSecondary }]}>LEARNING PATHS</Text>
+            <Text style={[styles.sectionHint, { color: theme.textSecondary }]}>
+              LEARNING PATHS
+            </Text>
             <InlineAddRow
               compact
               label='Add path'
@@ -80,7 +107,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     maxWidth: MaxContentWidth,
-    paddingHorizontal: Spacing.four,
+    paddingHorizontal: Spacing.three,
     paddingTop: Spacing.four,
     paddingBottom: Spacing.four,
   },

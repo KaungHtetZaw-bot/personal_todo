@@ -1,0 +1,6 @@
+[
+  { "id": "category-english", "path_id": "path-international-language", "name": "English", "position": 0 },
+  { "id": "category-japan", "path_id": "path-international-language", "name": "Japan", "position": 1 },
+  { "id": "category-korean", "path_id": "path-international-language", "name": "Korean", "position": 2 },
+  { "id": "category-mobile", "path_id": "path-programming-language", "name": "Mobile", "position": 0 }
+]

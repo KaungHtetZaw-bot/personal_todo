@@ -1,0 +1,11 @@
+[
+  { "id": "exercise-squats", "name": "Bodyweight squats", "muscle_group": "Legs" },
+  { "id": "exercise-push-ups", "name": "Push-ups", "muscle_group": "Chest · arms" },
+  { "id": "exercise-mountain-climbers", "name": "Mountain climbers", "muscle_group": "Core · cardio" },
+  { "id": "exercise-plank", "name": "Plank", "muscle_group": "Core" },
+  { "id": "exercise-pike-push-ups", "name": "Pike push-ups", "muscle_group": "Shoulders" },
+  { "id": "exercise-shoulder-taps", "name": "Plank shoulder taps", "muscle_group": "Core · shoulders" },
+  { "id": "exercise-cat-cow", "name": "Cat-cow stretch", "muscle_group": "Back" },
+  { "id": "exercise-worlds-greatest", "name": "World's greatest stretch", "muscle_group": "Hips · back" },
+  { "id": "exercise-child-pose", "name": "Child's pose", "muscle_group": "Recovery" }
+]

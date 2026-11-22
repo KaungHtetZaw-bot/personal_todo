@@ -50,9 +50,7 @@ function Row({ label, value, children }: RowProps) {
             },
       ]}
     >
-      <Text
-        style={[typeStyle(item.text), { color: theme.text, flex: 1 }]}
-      >
+      <Text style={[typeStyle(item.text), { color: theme.text, flex: 1 }]}>
         {label}
       </Text>
       {value != null && (
@@ -128,7 +126,12 @@ function DesignOptionRow({
       </View>
 
       <View style={styles.optionText}>
-        <Text style={[typeStyle(item.text), { color: selected ? theme.accent : theme.text }]}>
+        <Text
+          style={[
+            typeStyle(item.text),
+            { color: selected ? theme.accent : theme.text },
+          ]}
+        >
           {option.label}
         </Text>
         <Text
@@ -159,8 +162,7 @@ function DesignDropdown() {
   const item = tokens.item;
   const isCard = item.style === "card";
   const selected =
-    DESIGN_OPTIONS.find((option) => option.id === design) ??
-    DESIGN_OPTIONS[0];
+    DESIGN_OPTIONS.find((option) => option.id === design) ?? DESIGN_OPTIONS[0];
 
   return (
     <View>
@@ -211,8 +213,12 @@ function DesignDropdown() {
             <Text style={[typeStyle(item.text), { color: theme.text }]}>
               {selected.label}
             </Text>
-            <View style={[styles.activeBadge, { backgroundColor: theme.tagBg }]}>
-              <Text style={[styles.activeBadgeText, { color: theme.tagText }]}>Active</Text>
+            <View
+              style={[styles.activeBadge, { backgroundColor: theme.tagBg }]}
+            >
+              <Text style={[styles.activeBadgeText, { color: theme.tagText }]}>
+                Active
+              </Text>
             </View>
           </View>
           <Text
@@ -408,11 +414,12 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     justifyContent: "center",
+    height: "100%",
   },
   safeArea: {
     flex: 1,
     maxWidth: MaxContentWidth,
-    paddingHorizontal: Spacing.four,
+    paddingHorizontal: Spacing.three,
     paddingTop: Spacing.four,
     paddingBottom: Spacing.four,
   },

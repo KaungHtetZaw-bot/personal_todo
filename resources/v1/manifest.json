@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "files": {
+    "learnPaths": "https://github.com/OWNER/REPO/releases/download/v1/learn-paths.json",
+    "learnCategories": "https://github.com/OWNER/REPO/releases/download/v1/learn-categories.json",
+    "learnItems": "https://github.com/OWNER/REPO/releases/download/v1/learn-items.json",
+    "books": "https://github.com/OWNER/REPO/releases/download/v1/books.json",
+    "workoutRoutines": "https://github.com/OWNER/REPO/releases/download/v1/workout-routines.json",
+    "exercises": "https://github.com/OWNER/REPO/releases/download/v1/exercises.json",
+    "routineExercises": "https://github.com/OWNER/REPO/releases/download/v1/routine-exercises.json"
+  }
+}
