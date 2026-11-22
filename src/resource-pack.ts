@@ -2,7 +2,8 @@ import * as FileSystem from "expo-file-system/legacy";
 import type { SQLiteDatabase } from "expo-sqlite";
 
 /** Set this after publishing a manifest.json to your static resource host. */
-export const RESOURCE_MANIFEST_URL = "";
+export const RESOURCE_MANIFEST_URL =
+  "https://raw.githubusercontent.com/KaungHtetZaw-bot/personal_todo/main/resources/v1/manifest.json";
 
 type ResourceManifest = {
   version: number;
