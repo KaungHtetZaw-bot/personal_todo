@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "files": {
     "learnPaths": "https://raw.githubusercontent.com/KaungHtetZaw-bot/personal_todo/main/resources/v1/learn-paths.json",
     "learnCategories": "https://raw.githubusercontent.com/KaungHtetZaw-bot/personal_todo/main/resources/v1/learn-categories.json",
