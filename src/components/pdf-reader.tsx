@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useSQLiteContext } from "expo-sqlite";
-import Pdf from "react-native-pdf";
 import { SafeAreaView } from "react-native-safe-area-context";
+import PdfViewer from "./pdf-viewer";
 
 type BookPdf = {
   title: string;
@@ -51,13 +51,7 @@ export default function PdfReader() {
             <Text style={styles.message}>Preparing PDF…</Text>
           </View>
         ) : book?.local_path ? (
-          <Pdf
-            source={{ uri: book.local_path, cache: false }}
-            style={styles.pdf}
-            trustAllCerts={false}
-            enablePaging={false}
-            onError={() => setBook(null)}
-          />
+          <PdfViewer uri={book.local_path} onError={() => setBook(null)} />
         ) : (
           <View style={styles.center}>
             <Text style={styles.message}>This PDF is not downloaded yet.</Text>
@@ -78,7 +72,6 @@ const styles = StyleSheet.create({
   titleWrap: { flex: 1 },
   title: { color: "#ffffff", fontSize: 16, lineHeight: 22, fontWeight: "700" },
   author: { color: "#bdbdbd", fontSize: 12, lineHeight: 17 },
-  pdf: { flex: 1, backgroundColor: "#333333" },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 8, padding: 24 },
   message: { color: "#ffffff", fontSize: 15, textAlign: "center" },
   hint: { color: "#bdbdbd", fontSize: 13, textAlign: "center" },

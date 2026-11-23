@@ -1,10 +1,9 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { SQLiteProvider, useSQLiteContext } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, Text, View, StyleSheet } from 'react-native';
 import { useEffect, useState, type ReactNode } from 'react';
 
-import AppTabs from '@/components/app-tabs';
 import { CategoriesProvider } from '@/hooks/use-categories';
 import { TodosProvider } from '@/hooks/use-todos';
 import { DesignProvider, useDesign } from '@/theme';
@@ -59,7 +58,10 @@ function ThemedApp() {
     <View style={styles.root}>
       <ThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
         <StatusBar style={isDark ? 'light' : 'dark'} animated />
-        <AppTabs />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="pdf/[bookId]" />
+        </Stack>
       </ThemeProvider>
     </View>
   );
