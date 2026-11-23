@@ -1,7 +1,9 @@
+import { useSQLiteContext } from "expo-sqlite";
+import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-  Platform,
   Image,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,7 +11,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useSQLiteContext } from "expo-sqlite";
 
 import {
   MaxContentWidth,
@@ -30,6 +31,7 @@ type Book = {
   detail: string;
   color: string;
   coverUri?: string;
+  filePath?: string;
 };
 
 type BookRow = {
@@ -41,6 +43,7 @@ type BookRow = {
   total_pages: number | null;
   notes: string | null;
   file_name: string | null;
+  local_path: string | null;
   size: number | null;
   cover_local_path: string | null;
 };
@@ -65,7 +68,7 @@ export default function BooksScreen() {
     let mounted = true;
     db.getAllAsync<BookRow>(
       `SELECT books.id, books.title, books.author, books.status, books.progress,
-        books.total_pages, books.notes, resource_files.file_name, resource_files.size,
+        books.total_pages, books.notes, resource_files.file_name, resource_files.local_path, resource_files.size,
         cover_files.local_path as cover_local_path
        FROM books
        LEFT JOIN resource_files
@@ -116,60 +119,69 @@ export default function BooksScreen() {
             </Text>
           </View>
 
-          {current ? <View
-            style={[
-              styles.currentCard,
-              {
-                backgroundColor: theme.surface,
-                borderColor: theme.border,
-                borderRadius: Math.max(item.radius, 16),
-                borderWidth: isCard ? item.borderWidth : 1,
-                boxShadow: boxShadow(item.shadow, theme.shadow),
-              },
-            ]}
-          >
-            <Text style={[styles.eyebrow, { color: theme.textMuted }]}>
-              CURRENTLY READING
-            </Text>
-            <View style={styles.currentContent}>
-              <BookCover book={current} />
-              <View style={styles.currentInfo}>
-                <Text style={[styles.currentTitle, { color: theme.text }]}>
-                  {current.title}
-                </Text>
-                <Text style={[styles.author, { color: theme.textSecondary }]}>
-                  {current.author}
-                </Text>
-                <Text style={[styles.progressDetail, { color: theme.text }]}>
-                  {current.progress}% complete
-                </Text>
-                <View
-                  style={[
-                    styles.progressTrack,
-                    { backgroundColor: theme.border },
-                  ]}
-                >
+          {current ? (
+            <View
+              style={[
+                styles.currentCard,
+                {
+                  backgroundColor: theme.surface,
+                  borderColor: theme.border,
+                  borderRadius: Math.max(item.radius, 16),
+                  borderWidth: isCard ? item.borderWidth : 1,
+                  boxShadow: boxShadow(item.shadow, theme.shadow),
+                },
+              ]}
+            >
+              <Text style={[styles.eyebrow, { color: theme.textMuted }]}>
+                CURRENTLY READING
+              </Text>
+              <View style={styles.currentContent}>
+                <BookCover book={current} />
+                <View style={styles.currentInfo}>
+                  <Text style={[styles.currentTitle, { color: theme.text }]}>
+                    {current.title}
+                  </Text>
+                  <Text style={[styles.author, { color: theme.textSecondary }]}>
+                    {current.author}
+                  </Text>
+                  <Text style={[styles.progressDetail, { color: theme.text }]}>
+                    {current.progress}% complete
+                  </Text>
                   <View
                     style={[
-                      styles.progressFill,
-                      {
-                        backgroundColor: theme.accent,
-                        width: `${current.progress}%`,
-                      },
+                      styles.progressTrack,
+                      { backgroundColor: theme.border },
                     ]}
-                  />
+                  >
+                    <View
+                      style={[
+                        styles.progressFill,
+                        {
+                          backgroundColor: theme.accent,
+                          width: `${current.progress}%`,
+                        },
+                      ]}
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      styles.progressNote,
+                      { color: theme.textSecondary },
+                    ]}
+                  >
+                    {current.detail}
+                  </Text>
                 </View>
-                <Text
-                  style={[styles.progressNote, { color: theme.textSecondary }]}
-                >
-                  {current.detail}
-                </Text>
               </View>
             </View>
-          </View> : (
+          ) : (
             <View style={[styles.emptyState, { borderColor: theme.border }]}>
-              <Text style={[styles.emptyTitle, { color: theme.text }]}>No books yet</Text>
-              <Text style={[styles.emptyText, { color: theme.textSecondary }]}>Your downloaded book resources will appear here.</Text>
+              <Text style={[styles.emptyTitle, { color: theme.text }]}>
+                No books yet
+              </Text>
+              <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+                Your downloaded book resources will appear here.
+              </Text>
             </View>
           )}
 
@@ -224,6 +236,8 @@ export default function BooksScreen() {
                 key={book.id}
                 accessibilityRole='button'
                 accessibilityLabel={`${book.title} by ${book.author}`}
+                disabled={!book.filePath}
+                onPress={() => book.filePath && router.push({ pathname: "/pdf/[bookId]", params: { bookId: book.id } })}
                 style={({ pressed }) => [
                   styles.bookRow,
                   isCard
@@ -246,7 +260,7 @@ export default function BooksScreen() {
                       { color: theme.text },
                       containsMyanmar(book.title) && styles.myanmarText,
                     ]}
-                    numberOfLines={1}
+                    numberOfLines={3}
                   >
                     {book.title}
                   </Text>
@@ -301,7 +315,7 @@ function BookCover({ book, small = false }: { book: Book; small?: boolean }) {
         <Image
           source={{ uri: book.coverUri }}
           style={[styles.coverImage, small && styles.coverImageSmall]}
-          resizeMode="cover"
+          resizeMode='cover'
         />
       ) : (
         <Text
@@ -312,7 +326,11 @@ function BookCover({ book, small = false }: { book: Book; small?: boolean }) {
             { color: "#17130d" },
           ]}
         >
-          {book.title.split(" ").slice(0, 2).map((word) => word[0]).join("")}
+          {book.title
+            .split(" ")
+            .slice(0, 2)
+            .map((word) => word[0])
+            .join("")}
         </Text>
       )}
     </View>
@@ -328,9 +346,11 @@ function toBook(row: BookRow): Book {
     progress: row.progress ?? 0,
     detail: row.file_name
       ? `${row.file_name.toLowerCase().endsWith(".pdf") ? "PDF" : "File"} · ${formatSize(row.size)}`
-      : row.notes ?? (row.total_pages ? `${row.total_pages} pages` : "Saved book"),
+      : (row.notes ??
+        (row.total_pages ? `${row.total_pages} pages` : "Saved book")),
     color: colorForBook(row.id),
     coverUri: row.cover_local_path ?? undefined,
+    filePath: row.file_name?.toLowerCase().endsWith(".pdf") ? row.local_path ?? undefined : undefined,
   };
 }
 
@@ -343,7 +363,9 @@ function formatSize(size: number | null) {
 
 function colorForBook(id: string) {
   const colors = ["#f1b84b", "#6a8fd7", "#d98f9e", "#73aa7d", "#c7a36a"];
-  const seed = id.split("").reduce((sum, character) => sum + character.charCodeAt(0), 0);
+  const seed = id
+    .split("")
+    .reduce((sum, character) => sum + character.charCodeAt(0), 0);
   return colors[seed % colors.length];
 }
 
@@ -372,8 +394,8 @@ const styles = StyleSheet.create({
   },
   currentContent: { flexDirection: "row", gap: Spacing.three },
   currentInfo: { flex: 1, justifyContent: "center", gap: 2 },
-  currentTitle: { fontSize: 21, lineHeight: 27, fontWeight: "800" },
-  author: { fontSize: 12, lineHeight: 17 },
+  currentTitle: { fontSize: 21, lineHeight: 42, fontWeight: "800" },
+  author: { fontSize: 12, lineHeight: 24 },
   progressDetail: {
     fontSize: 12,
     lineHeight: 17,
@@ -395,7 +417,6 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     alignItems: "center",
     justifyContent: "center",
-    padding: Spacing.two,
   },
   coverImage: { width: "100%", height: "100%", borderRadius: 4 },
   coverImageSmall: { borderRadius: 3 },
@@ -437,12 +458,18 @@ const styles = StyleSheet.create({
   bookDetail: { fontSize: 11, lineHeight: 15, marginTop: Spacing.one },
   status: { fontSize: 11, lineHeight: 15, fontWeight: "800" },
   pressed: { opacity: 0.7 },
-  emptyState: { borderWidth: 1, borderRadius: 16, padding: Spacing.four, gap: Spacing.one, marginBottom: Spacing.three },
+  emptyState: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: Spacing.four,
+    gap: Spacing.one,
+    marginBottom: Spacing.three,
+  },
   emptyTitle: { fontSize: 16, lineHeight: 22, fontWeight: "800" },
   emptyText: { fontSize: 13, lineHeight: 19 },
   myanmarText: {
     fontFamily: Platform.OS === "ios" ? "Myanmar Text" : "sans-serif",
-    lineHeight: 24,
+    lineHeight: 36,
   },
   myanmarCoverText: {
     fontFamily: Platform.OS === "ios" ? "Myanmar Text" : "sans-serif",
