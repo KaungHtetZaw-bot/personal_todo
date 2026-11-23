@@ -49,7 +49,7 @@ type ResourcePack = {
     file_url?: string;
   }[];
   workoutRoutines: { id: string; name: string; description?: string; duration_minutes?: number }[];
-  exercises: { id: string; name: string; muscle_group?: string; instructions?: string }[];
+  exercises: { id: string; name: string; muscle_group?: string; instructions?: string; video_prompt?: string }[];
   routineExercises: {
     routine_id: string;
     exercise_id: string;
@@ -136,7 +136,7 @@ export async function syncResourcePack(db: SQLiteDatabase): Promise<number | nul
       await db.runAsync("INSERT OR REPLACE INTO workout_routines (id, name, description, duration_minutes) VALUES (?, ?, ?, ?)", row.id, row.name, row.description ?? null, row.duration_minutes ?? null);
     }
     for (const row of pack.exercises) {
-      await db.runAsync("INSERT OR REPLACE INTO exercises (id, name, muscle_group, instructions) VALUES (?, ?, ?, ?)", row.id, row.name, row.muscle_group ?? null, row.instructions ?? null);
+      await db.runAsync("INSERT OR REPLACE INTO exercises (id, name, muscle_group, instructions, video_prompt) VALUES (?, ?, ?, ?, ?)", row.id, row.name, row.muscle_group ?? null, row.instructions ?? null, row.video_prompt ?? null);
     }
     for (const row of pack.routineExercises) {
       await db.runAsync("INSERT OR REPLACE INTO routine_exercises (routine_id, exercise_id, position, sets, reps, duration_seconds) VALUES (?, ?, ?, ?, ?, ?)", row.routine_id, row.exercise_id, row.position ?? 0, row.sets ?? null, row.reps ?? null, row.duration_seconds ?? null);

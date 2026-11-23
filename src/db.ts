@@ -71,7 +71,8 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
       id TEXT PRIMARY KEY NOT NULL,
       name TEXT NOT NULL,
       muscle_group TEXT,
-      instructions TEXT
+      instructions TEXT,
+      video_prompt TEXT
     );
 
     CREATE TABLE IF NOT EXISTS routine_exercises (
@@ -121,4 +122,9 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
     CREATE INDEX IF NOT EXISTS idx_learn_items_category ON learn_items(category_id);
     CREATE INDEX IF NOT EXISTS idx_todo_links_resource ON todo_links(resource_type, resource_id);
   `);
+
+  const exerciseColumns = await db.getAllAsync<{ name: string }>("PRAGMA table_info(exercises)");
+  if (!exerciseColumns.some((column) => column.name === "video_prompt")) {
+    await db.execAsync("ALTER TABLE exercises ADD COLUMN video_prompt TEXT");
+  }
 }

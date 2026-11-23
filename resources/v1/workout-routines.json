@@ -1,5 +1,8 @@
 [
-  { "id": "routine-full-body", "name": "Full body", "description": "A balanced session for strength and energy.", "duration_minutes": 25 },
-  { "id": "routine-upper-body", "name": "Upper body", "description": "Focused work for your chest, back, and arms.", "duration_minutes": 20 },
-  { "id": "routine-mobility", "name": "Mobility", "description": "Move well and reset after a long day.", "duration_minutes": 15 }
+  {
+    "id": "routine-workout-part-1",
+    "name": "Part 1 · Bodyweight foundation",
+    "description": "A simple five-exercise foundation session for full-body strength.",
+    "duration_minutes": 20
+  }
 ]

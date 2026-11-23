@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useSQLiteContext } from "expo-sqlite";
+import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -11,72 +12,84 @@ import {
   useTheme,
 } from "@/theme";
 
-type Exercise = { name: string; detail: string; note: string };
+type Exercise = {
+  id: string;
+  name: string;
+  muscleGroup: string;
+  detail: string;
+};
 type Routine = {
   id: string;
   name: string;
-  duration: string;
+  durationMinutes: number;
   description: string;
   exercises: Exercise[];
 };
-
-const ROUTINES: Routine[] = [
-  {
-    id: "full-body",
-    name: "Full body",
-    duration: "25 min",
-    description: "A balanced session for strength and energy.",
-    exercises: [
-      { name: "Bodyweight squats", detail: "3 × 12", note: "Legs" },
-      { name: "Push-ups", detail: "3 × 8", note: "Chest · arms" },
-      {
-        name: "Mountain climbers",
-        detail: "3 × 30 sec",
-        note: "Core · cardio",
-      },
-      { name: "Plank", detail: "3 × 30 sec", note: "Core" },
-    ],
-  },
-  {
-    id: "upper-body",
-    name: "Upper body",
-    duration: "20 min",
-    description: "Focused work for your chest, back, and arms.",
-    exercises: [
-      { name: "Push-ups", detail: "4 × 8", note: "Chest · arms" },
-      { name: "Pike push-ups", detail: "3 × 8", note: "Shoulders" },
-      {
-        name: "Plank shoulder taps",
-        detail: "3 × 20",
-        note: "Core · shoulders",
-      },
-    ],
-  },
-  {
-    id: "mobility",
-    name: "Mobility",
-    duration: "15 min",
-    description: "Move well and reset after a long day.",
-    exercises: [
-      { name: "Cat-cow stretch", detail: "2 × 45 sec", note: "Back" },
-      {
-        name: "World's greatest stretch",
-        detail: "2 × 5 / side",
-        note: "Hips · back",
-      },
-      { name: "Child's pose", detail: "2 × 60 sec", note: "Recovery" },
-    ],
-  },
-];
+type RoutineRow = {
+  id: string;
+  name: string;
+  duration_minutes: number | null;
+  description: string | null;
+};
+type ExerciseRow = {
+  routine_id: string;
+  exercise_id: string;
+  name: string;
+  muscle_group: string | null;
+  sets: number | null;
+  reps: number | null;
+  duration_seconds: number | null;
+  position: number;
+};
 
 export default function WorkoutScreen() {
+  const db = useSQLiteContext();
   const theme = useTheme();
   const { tokens } = useDesign();
-  const [selectedId, setSelectedId] = useState(ROUTINES[0].id);
-  const routine =
-    ROUTINES.find((item) => item.id === selectedId) ?? ROUTINES[0];
+  const [routines, setRoutines] = useState<Routine[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const item = tokens.item;
   const isCard = item.style === "card";
+
+  useEffect(() => {
+    let mounted = true;
+    Promise.all([
+      db.getAllAsync<RoutineRow>(
+        "SELECT id, name, duration_minutes, description FROM workout_routines ORDER BY id",
+      ),
+      db.getAllAsync<ExerciseRow>(
+        `SELECT routine_exercises.routine_id, routine_exercises.exercise_id, exercises.name, exercises.muscle_group, routine_exercises.sets, routine_exercises.reps, routine_exercises.duration_seconds, routine_exercises.position FROM routine_exercises INNER JOIN exercises ON exercises.id = routine_exercises.exercise_id ORDER BY routine_exercises.routine_id, routine_exercises.position`,
+      ),
+    ])
+      .then(([routineRows, exerciseRows]) => {
+        if (!mounted) return;
+        const next = routineRows.map((row) => ({
+          id: row.id,
+          name: row.name,
+          durationMinutes: row.duration_minutes ?? 0,
+          description: row.description ?? "",
+          exercises: exerciseRows
+            .filter((exercise) => exercise.routine_id === row.id)
+            .map((exercise) => ({
+              id: exercise.exercise_id,
+              name: exercise.name,
+              muscleGroup: exercise.muscle_group ?? "Full body",
+              detail: formatPrescription(exercise),
+            })),
+        }));
+        setRoutines(next);
+        setSelectedId((current) => current ?? next[0]?.id ?? null);
+      })
+      .catch(() => {
+        if (mounted) setRoutines([]);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [db]);
+
+  const routine =
+    routines.find((entry) => entry.id === selectedId) ?? routines[0];
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -99,137 +112,171 @@ export default function WorkoutScreen() {
               Choose a routine and get moving.
             </Text>
           </View>
-
-          <View
-            style={[
-              styles.planCard,
-              {
-                backgroundColor: theme.accent,
-                borderColor: theme.border,
-                borderRadius: Math.max(item.radius, 16),
-                borderWidth: item.style === "card" ? item.borderWidth : 0,
-                boxShadow: boxShadow(item.shadow, theme.shadow),
-              },
-            ]}
-          >
-            <Text style={[styles.eyebrow, { color: theme.onAccent }]}>
-              TODAY&apos;S PLAN
-            </Text>
-            <Text style={[styles.planTitle, { color: theme.onAccent }]}>
-              {routine.name}
-            </Text>
-            <Text style={[styles.planDescription, { color: theme.onAccent }]}>
-              {routine.description}
-            </Text>
-            <View style={styles.planMeta}>
-              <Text style={[styles.metaText, { color: theme.onAccent }]}>
-                {routine.exercises.length} exercises
-              </Text>
-              <Text style={[styles.metaText, { color: theme.onAccent }]}>
-                {routine.duration}
-              </Text>
-            </View>
-          </View>
-
-          <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
-            ROUTINES
-          </Text>
-          <View style={styles.routineList}>
-            {ROUTINES.map((option) => {
-              const selected = option.id === routine.id;
-              return (
-                <Pressable
-                  key={option.id}
-                  accessibilityRole='radio'
-                  accessibilityState={{ selected }}
-                  accessibilityLabel={`${option.name} routine`}
-                  onPress={() => setSelectedId(option.id)}
-                  style={({ pressed }) => [
-                    styles.routineButton,
-                    {
-                      backgroundColor: selected ? theme.tagBg : "transparent",
-                      borderColor: selected ? theme.accent : theme.border,
-                      borderRadius: Math.max(item.radius, 10),
-                      borderWidth: selected ? Math.max(item.borderWidth, 2) : 1,
-                    },
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.routineName,
-                      { color: selected ? theme.accent : theme.text },
-                    ]}
-                  >
-                    {option.name}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.routineDuration,
-                      { color: theme.textSecondary },
-                    ]}
-                  >
-                    {option.duration}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <View style={styles.exerciseHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
-              EXERCISES
-            </Text>
-            <Text style={[styles.exerciseCount, { color: theme.textMuted }]}>
-              {routine.exercises.length} total
-            </Text>
-          </View>
-
-          <View style={styles.exerciseList}>
-            {routine.exercises.map((exercise, index) => (
+          {routine ? (
+            <>
               <View
-                key={exercise.name}
                 style={[
-                  styles.exerciseRow,
-                  isCard
-                    ? {
-                        backgroundColor: theme.surface,
-                        borderColor: theme.border,
-                        borderRadius: item.radius,
-                        borderWidth: item.borderWidth,
-                        boxShadow: boxShadow(item.shadow, theme.shadow),
-                      }
-                    : { borderBottomColor: theme.border, borderBottomWidth: 1 },
+                  styles.planCard,
+                  {
+                    backgroundColor: theme.accent,
+                    borderColor: theme.border,
+                    borderRadius: Math.max(item.radius, 16),
+                    borderWidth: isCard ? item.borderWidth : 0,
+                    boxShadow: boxShadow(item.shadow, theme.shadow),
+                  },
                 ]}
               >
-                <View style={[styles.number, { backgroundColor: theme.tagBg }]}>
-                  <Text style={[styles.numberText, { color: theme.tagText }]}>
-                    {index + 1}
+                <Text style={[styles.eyebrow, { color: theme.onAccent }]}>
+                  TODAY&apos;S PLAN
+                </Text>
+                <Text style={[styles.planTitle, { color: theme.onAccent }]}>
+                  {routine.name}
+                </Text>
+                <Text
+                  style={[styles.planDescription, { color: theme.onAccent }]}
+                >
+                  {routine.description}
+                </Text>
+                <View style={styles.planMeta}>
+                  <Text style={[styles.metaText, { color: theme.onAccent }]}>
+                    {routine.exercises.length} exercises
+                  </Text>
+                  <Text style={[styles.metaText, { color: theme.onAccent }]}>
+                    {routine.durationMinutes} min
                   </Text>
                 </View>
-                <View style={styles.exerciseInfo}>
-                  <Text style={[typeStyle(item.text), { color: theme.text }]}>
-                    {exercise.name}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.exerciseNote,
-                      { color: theme.textSecondary },
-                    ]}
-                  >
-                    {exercise.note}
-                  </Text>
-                </View>
-                <Text style={[styles.exerciseDetail, { color: theme.accent }]}>
-                  {exercise.detail}
+              </View>
+              <Text
+                style={[styles.sectionTitle, { color: theme.textSecondary }]}
+              >
+                ROUTINES
+              </Text>
+              <View style={styles.routineList}>
+                {routines.map((option) => {
+                  const selected = option.id === routine.id;
+                  return (
+                    <Pressable
+                      key={option.id}
+                      accessibilityRole='radio'
+                      accessibilityState={{ selected }}
+                      onPress={() => setSelectedId(option.id)}
+                      style={[
+                        styles.routineButton,
+                        {
+                          backgroundColor: selected
+                            ? theme.tagBg
+                            : "transparent",
+                          borderColor: selected ? theme.accent : theme.border,
+                          borderRadius: Math.max(item.radius, 10),
+                          borderWidth: selected
+                            ? Math.max(item.borderWidth, 2)
+                            : 1,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.routineName,
+                          { color: selected ? theme.accent : theme.text },
+                        ]}
+                      >
+                        {option.name}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.routineDuration,
+                          { color: theme.textSecondary },
+                        ]}
+                      >
+                        {option.durationMinutes} min
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <View style={styles.exerciseHeader}>
+                <Text
+                  style={[styles.sectionTitle, { color: theme.textSecondary }]}
+                >
+                  EXERCISES
+                </Text>
+                <Text
+                  style={[styles.exerciseCount, { color: theme.textMuted }]}
+                >
+                  {routine.exercises.length} total
                 </Text>
               </View>
-            ))}
-          </View>
+              <View style={styles.exerciseList}>
+                {routine.exercises.map((exercise, index) => (
+                  <View
+                    key={exercise.id}
+                    style={[
+                      styles.exerciseRow,
+                      isCard
+                        ? {
+                            backgroundColor: theme.surface,
+                            borderColor: theme.border,
+                            borderRadius: item.radius,
+                            borderWidth: item.borderWidth,
+                            boxShadow: boxShadow(item.shadow, theme.shadow),
+                          }
+                        : {
+                            borderBottomColor: theme.border,
+                            borderBottomWidth: 1,
+                          },
+                    ]}
+                  >
+                    <View
+                      style={[styles.number, { backgroundColor: theme.tagBg }]}
+                    >
+                      <Text
+                        style={[styles.numberText, { color: theme.tagText }]}
+                      >
+                        {index + 1}
+                      </Text>
+                    </View>
+                    <View style={styles.exerciseInfo}>
+                      <Text
+                        style={[typeStyle(item.text), { color: theme.text }]}
+                      >
+                        {exercise.name}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.exerciseNote,
+                          { color: theme.textSecondary },
+                        ]}
+                      >
+                        {exercise.muscleGroup}
+                      </Text>
+                    </View>
+                    <Text
+                      style={[styles.exerciseDetail, { color: theme.accent }]}
+                    >
+                      {exercise.detail}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </>
+          ) : (
+            <View style={[styles.emptyState, { borderColor: theme.border }]}>
+              <Text style={[styles.emptyTitle, { color: theme.text }]}>
+                No workout routines yet
+              </Text>
+              <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+                Download the resource pack to load workouts.
+              </Text>
+            </View>
+          )}
         </ScrollView>
       </SafeAreaView>
     </View>
   );
+}
+
+function formatPrescription(row: ExerciseRow) {
+  return `${row.sets ?? 0} × ${row.duration_seconds ? `${row.duration_seconds} sec` : (row.reps ?? 0)}`;
 }
 
 const styles = StyleSheet.create({
@@ -314,5 +361,12 @@ const styles = StyleSheet.create({
   exerciseInfo: { flex: 1, gap: 2 },
   exerciseNote: { fontSize: 12, lineHeight: 16 },
   exerciseDetail: { fontSize: 13, lineHeight: 18, fontWeight: "800" },
-  pressed: { opacity: 0.7 },
+  emptyState: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: Spacing.four,
+    gap: Spacing.one,
+  },
+  emptyTitle: { fontSize: 16, lineHeight: 22, fontWeight: "800" },
+  emptyText: { fontSize: 13, lineHeight: 19 },
 });

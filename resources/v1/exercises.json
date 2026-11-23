@@ -1,11 +1,37 @@
 [
-  { "id": "exercise-squats", "name": "Bodyweight squats", "muscle_group": "Legs" },
-  { "id": "exercise-push-ups", "name": "Push-ups", "muscle_group": "Chest · arms" },
-  { "id": "exercise-mountain-climbers", "name": "Mountain climbers", "muscle_group": "Core · cardio" },
-  { "id": "exercise-plank", "name": "Plank", "muscle_group": "Core" },
-  { "id": "exercise-pike-push-ups", "name": "Pike push-ups", "muscle_group": "Shoulders" },
-  { "id": "exercise-shoulder-taps", "name": "Plank shoulder taps", "muscle_group": "Core · shoulders" },
-  { "id": "exercise-cat-cow", "name": "Cat-cow stretch", "muscle_group": "Back" },
-  { "id": "exercise-worlds-greatest", "name": "World's greatest stretch", "muscle_group": "Hips · back" },
-  { "id": "exercise-child-pose", "name": "Child's pose", "muscle_group": "Recovery" }
+  {
+    "id": "exercise-standard-push-up",
+    "name": "Standard Push-Up",
+    "muscle_group": "Chest · shoulders · triceps",
+    "instructions": "Keep a flat plank line and lower your chest with slow, controlled movement.",
+    "video_prompt": "Cinematic fitness tutorial video of a young man performing standard bodyweight push-ups on a clean floor, proper flat plank form, slow and controlled movement, side angle view, high quality."
+  },
+  {
+    "id": "exercise-bodyweight-squat",
+    "name": "Bodyweight Squat",
+    "muscle_group": "Thighs · glutes · lower body",
+    "instructions": "Keep your heels flat and lower until your thighs are parallel to the ground.",
+    "video_prompt": "Step-by-step fitness demonstration of bodyweight squats, proper form with heels flat on the floor, thighs parallel to the ground at the bottom, front-side angle view, clean gym or home studio setting."
+  },
+  {
+    "id": "exercise-pike-push-up",
+    "name": "Pike Push-Up",
+    "muscle_group": "Shoulders · upper chest",
+    "instructions": "Raise your hips into an inverted V and lower your head toward the floor with control.",
+    "video_prompt": "Fitness tutorial video showing a man doing pike push-ups, hips raised high in an inverted V-shape position, lowering head toward the floor with controlled movement, gym background."
+  },
+  {
+    "id": "exercise-australian-pull-up",
+    "name": "Australian Pull-Up / Inverted Row",
+    "muscle_group": "Back · biceps",
+    "instructions": "Use a sturdy table or low bar, keep your body straight, and pull your chest toward the support.",
+    "video_prompt": "Home calisthenics demonstration of an Australian pull-up or inverted row using a sturdy table or low bar, body straight, pulling chest to the bar, clear instructional angle."
+  },
+  {
+    "id": "exercise-plank-hold",
+    "name": "Plank Hold",
+    "muscle_group": "Core stability",
+    "instructions": "Keep a straight line from head to heels and brace your core throughout the hold.",
+    "video_prompt": "Fitness demonstration of a forearm plank hold, straight body alignment from head to heels, engaged core, stable and clean background, slow motion close-up."
+  }
 ]

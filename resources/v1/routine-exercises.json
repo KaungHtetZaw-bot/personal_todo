@@ -1,12 +1,37 @@
 [
-  { "routine_id": "routine-full-body", "exercise_id": "exercise-squats", "position": 0, "sets": 3, "reps": 12 },
-  { "routine_id": "routine-full-body", "exercise_id": "exercise-push-ups", "position": 1, "sets": 3, "reps": 8 },
-  { "routine_id": "routine-full-body", "exercise_id": "exercise-mountain-climbers", "position": 2, "sets": 3, "duration_seconds": 30 },
-  { "routine_id": "routine-full-body", "exercise_id": "exercise-plank", "position": 3, "sets": 3, "duration_seconds": 30 },
-  { "routine_id": "routine-upper-body", "exercise_id": "exercise-push-ups", "position": 0, "sets": 4, "reps": 8 },
-  { "routine_id": "routine-upper-body", "exercise_id": "exercise-pike-push-ups", "position": 1, "sets": 3, "reps": 8 },
-  { "routine_id": "routine-upper-body", "exercise_id": "exercise-shoulder-taps", "position": 2, "sets": 3, "reps": 20 },
-  { "routine_id": "routine-mobility", "exercise_id": "exercise-cat-cow", "position": 0, "sets": 2, "duration_seconds": 45 },
-  { "routine_id": "routine-mobility", "exercise_id": "exercise-worlds-greatest", "position": 1, "sets": 2, "reps": 5 },
-  { "routine_id": "routine-mobility", "exercise_id": "exercise-child-pose", "position": 2, "sets": 2, "duration_seconds": 60 }
+  {
+    "routine_id": "routine-workout-part-1",
+    "exercise_id": "exercise-standard-push-up",
+    "position": 0,
+    "sets": 3,
+    "reps": 8
+  },
+  {
+    "routine_id": "routine-workout-part-1",
+    "exercise_id": "exercise-bodyweight-squat",
+    "position": 1,
+    "sets": 3,
+    "reps": 12
+  },
+  {
+    "routine_id": "routine-workout-part-1",
+    "exercise_id": "exercise-pike-push-up",
+    "position": 2,
+    "sets": 3,
+    "reps": 6
+  },
+  {
+    "routine_id": "routine-workout-part-1",
+    "exercise_id": "exercise-australian-pull-up",
+    "position": 3,
+    "sets": 3,
+    "reps": 8
+  },
+  {
+    "routine_id": "routine-workout-part-1",
+    "exercise_id": "exercise-plank-hold",
+    "position": 4,
+    "sets": 3,
+    "duration_seconds": 30
+  }
 ]
