@@ -64,10 +64,13 @@ export async function syncResourcePack(db: SQLiteDatabase): Promise<number | nul
   if (!RESOURCE_MANIFEST_URL || !FileSystem.documentDirectory) return null;
 
   const manifest = await downloadJson<ResourceManifest>(RESOURCE_MANIFEST_URL, "manifest.json");
+  const books = await downloadJson<ResourcePack["books"]>(manifest.files.books, "books.json");
   const installed = await db.getFirstAsync<{ version: number }>(
     "SELECT version FROM resource_packs ORDER BY version DESC LIMIT 1",
   );
-  if (installed && installed.version >= manifest.version) return installed.version;
+  if (installed && installed.version >= manifest.version && await hasAllBookFiles(db, books)) {
+    return installed.version;
+  }
 
   const packDirectory = `${FileSystem.documentDirectory}resources/v${manifest.version}/`;
   await FileSystem.makeDirectoryAsync(packDirectory, { intermediates: true });
@@ -77,7 +80,7 @@ export async function syncResourcePack(db: SQLiteDatabase): Promise<number | nul
     learnPaths: await downloadJson(manifest.files.learnPaths, "learn-paths.json", packDirectory),
     learnCategories: await downloadJson(manifest.files.learnCategories, "learn-categories.json", packDirectory),
     learnItems: await downloadJson(manifest.files.learnItems, "learn-items.json", packDirectory),
-    books: await downloadJson(manifest.files.books, "books.json", packDirectory),
+    books,
     workoutRoutines: await downloadJson(manifest.files.workoutRoutines, "workout-routines.json", packDirectory),
     exercises: await downloadJson(manifest.files.exercises, "exercises.json", packDirectory),
     routineExercises: await downloadJson(manifest.files.routineExercises, "routine-exercises.json", packDirectory),
@@ -166,6 +169,23 @@ async function downloadJson<T>(url: string, fileName: string, directory = FileSy
   await FileSystem.downloadAsync(url, destination);
   const content = await FileSystem.readAsStringAsync(destination);
   return JSON.parse(content) as T;
+}
+
+async function hasAllBookFiles(db: SQLiteDatabase, books: ResourcePack["books"]) {
+  const expected = books.flatMap((book) => [
+    book.file_url ? `file-${book.id}` : null,
+    book.cover_url ? `cover-${book.id}` : null,
+  ].filter((id): id is string => Boolean(id)));
+  if (expected.length === 0) return true;
+
+  const rows = await db.getAllAsync<{ id: string; local_path: string | null }>(
+    "SELECT id, local_path FROM resource_files WHERE id IN (" + expected.map(() => "?").join(",") + ")",
+    ...expected,
+  );
+  if (rows.length !== expected.length || rows.some((row) => !row.local_path)) return false;
+
+  const states = await Promise.all(rows.map((row) => FileSystem.getInfoAsync(row.local_path as string)));
+  return states.every((state) => state.exists);
 }
 
 async function downloadResourceFile(input: {
