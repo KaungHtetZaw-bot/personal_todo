@@ -128,7 +128,9 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
     CREATE INDEX IF NOT EXISTS idx_todo_links_resource ON todo_links(resource_type, resource_id);
   `);
 
-  const exerciseColumns = await db.getAllAsync<{ name: string }>("PRAGMA table_info(exercises)");
+  const exerciseColumns = await db.getAllAsync<{ name: string }>(
+    "PRAGMA table_info(exercises)",
+  );
   if (!exerciseColumns.some((column) => column.name === "video_prompt")) {
     await db.execAsync("ALTER TABLE exercises ADD COLUMN video_prompt TEXT");
   }
@@ -141,34 +143,45 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
     "SELECT COUNT(*) as count FROM todos WHERE id IN (?, ?, ?)",
     "todo-sample-english-grammar",
     "todo-sample-workout",
-    "todo-sample-reading",
+    "LinKaDiPa-ChitThu",
   );
   if (!sampleSeed || sampleTodoCount?.count !== 3) {
     const createdAt = Date.now();
     await db.withTransactionAsync(async () => {
       await db.runAsync(
         "INSERT OR IGNORE INTO todos (id, list, text, done, position, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-        "todo-sample-english-grammar",
+        "PaYateGyi-11-Toat",
         "home",
-        "Learn English grammar for 10 minutes",
+        "ဘုရားကန်တော့ရန်",
         0,
         0,
         createdAt,
       );
       await db.runAsync(
         "INSERT OR IGNORE INTO todos (id, list, text, done, position, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+        "todo-sample-english-grammar",
+        "home",
+        "Learn English grammar for 10 minutes",
+        0,
+        1,
+        createdAt,
+      );
+      await db.runAsync(
+        "INSERT OR IGNORE INTO todos (id, list, text, done, position, created_at) VALUES (?, ?, ?, ?, ?, ?)",
         "todo-sample-workout",
+        "home",
         "Complete Workout Part 1",
         0,
-        0,
+        2,
         createdAt - 1,
       );
       await db.runAsync(
         "INSERT OR IGNORE INTO todos (id, list, text, done, position, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-        "todo-sample-reading",
+        "LinKaDiPa-ChitThu",
+        "home",
         "Read 10 pages",
         0,
-        0,
+        3,
         createdAt - 2,
       );
       await db.runAsync(
@@ -182,9 +195,24 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
     // first-run migration safe even when an older simulator database contains
     // stale or partially migrated link rows.
     const sampleLinks = [
-      ["link-todo-sample-english-grammar", "todo-sample-english-grammar", "learn_item", "item-english-grammar"],
-      ["link-todo-sample-workout", "todo-sample-workout", "workout_routine", "routine-workout-part-1"],
-      ["link-todo-sample-reading", "todo-sample-reading", "book", "book-linkadipa-chitthu"],
+      [
+        "link-todo-sample-english-grammar",
+        "todo-sample-english-grammar",
+        "learn_item",
+        "item-english-grammar",
+      ],
+      [
+        "link-todo-sample-workout",
+        "todo-sample-workout",
+        "workout_routine",
+        "routine-workout-part-1",
+      ],
+      [
+        "link-todo-sample-reading",
+        "LinKaDiPa-ChitThu",
+        "book",
+        "book-linkadipa-chitthu",
+      ],
     ] as const;
     for (const [id, todoId, resourceType, resourceId] of sampleLinks) {
       try {
