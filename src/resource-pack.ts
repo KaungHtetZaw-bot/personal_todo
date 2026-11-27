@@ -1,6 +1,17 @@
 import * as FileSystem from "expo-file-system/legacy";
 import type { SQLiteDatabase } from "expo-sqlite";
 
+const resourceListeners = new Set<() => void>();
+
+export function subscribeResourcePack(listener: () => void) {
+  resourceListeners.add(listener);
+  return () => resourceListeners.delete(listener);
+}
+
+function notifyResourcePackChanged() {
+  resourceListeners.forEach((listener) => listener());
+}
+
 /** Set this after publishing a manifest.json to your static resource host. */
 export const RESOURCE_MANIFEST_URL =
   "https://raw.githubusercontent.com/KaungHtetZaw-bot/personal_todo/main/resources/v1/manifest.json";
@@ -69,6 +80,7 @@ export async function syncResourcePack(db: SQLiteDatabase): Promise<number | nul
     "SELECT version FROM resource_packs ORDER BY version DESC LIMIT 1",
   );
   if (installed && installed.version >= manifest.version && await hasAllBookFiles(db, books)) {
+    notifyResourcePackChanged();
     return installed.version;
   }
 
@@ -160,6 +172,7 @@ export async function syncResourcePack(db: SQLiteDatabase): Promise<number | nul
     await db.runAsync("INSERT OR REPLACE INTO resource_packs (id, version, local_path, checksum, installed_at) VALUES (?, ?, ?, ?, ?)", `resources-v${manifest.version}`, manifest.version, packDirectory, manifest.checksum ?? null, Date.now());
   });
 
+  notifyResourcePackChanged();
   return manifest.version;
 }
 

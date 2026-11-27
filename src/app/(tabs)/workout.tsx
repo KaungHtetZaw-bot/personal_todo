@@ -1,4 +1,5 @@
 import { useSQLiteContext } from "expo-sqlite";
+import { setAudioModeAsync, useAudioPlayer } from "expo-audio";
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -11,6 +12,7 @@ import {
   useDesign,
   useTheme,
 } from "@/theme";
+import { subscribeResourcePack } from "@/resource-pack";
 
 type Exercise = {
   id: string;
@@ -42,26 +44,38 @@ type ExerciseRow = {
   position: number;
 };
 
+const REST_PRESETS = [30, 60, 90];
+
 export default function WorkoutScreen() {
   const db = useSQLiteContext();
   const theme = useTheme();
   const { tokens } = useDesign();
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [restSeconds, setRestSeconds] = useState(60);
+  const [timerRunning, setTimerRunning] = useState(false);
+  const [presetIndex, setPresetIndex] = useState(1);
+  const warningPlayer = useAudioPlayer(require("@/assets/sounds/timer-warning.wav"));
+  const finishedPlayer = useAudioPlayer(require("@/assets/sounds/timer-finished.wav"));
   const item = tokens.item;
   const isCard = item.style === "card";
 
   useEffect(() => {
+    setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
     let mounted = true;
-    Promise.all([
-      db.getAllAsync<RoutineRow>(
-        "SELECT id, name, duration_minutes, description FROM workout_routines ORDER BY id",
-      ),
-      db.getAllAsync<ExerciseRow>(
-        `SELECT routine_exercises.routine_id, routine_exercises.exercise_id, exercises.name, exercises.muscle_group, routine_exercises.sets, routine_exercises.reps, routine_exercises.duration_seconds, routine_exercises.position FROM routine_exercises INNER JOIN exercises ON exercises.id = routine_exercises.exercise_id ORDER BY routine_exercises.routine_id, routine_exercises.position`,
-      ),
-    ])
-      .then(([routineRows, exerciseRows]) => {
+    const loadWorkout = async () => {
+      try {
+        const [routineRows, exerciseRows] = await Promise.all([
+          db.getAllAsync<RoutineRow>(
+            "SELECT id, name, duration_minutes, description FROM workout_routines ORDER BY id",
+          ),
+          db.getAllAsync<ExerciseRow>(
+            `SELECT routine_exercises.routine_id, routine_exercises.exercise_id, exercises.name, exercises.muscle_group, routine_exercises.sets, routine_exercises.reps, routine_exercises.duration_seconds, routine_exercises.position FROM routine_exercises INNER JOIN exercises ON exercises.id = routine_exercises.exercise_id ORDER BY routine_exercises.routine_id, routine_exercises.position`,
+          ),
+        ]);
         if (!mounted) return;
         const next = routineRows.map((row) => ({
           id: row.id,
@@ -79,17 +93,50 @@ export default function WorkoutScreen() {
         }));
         setRoutines(next);
         setSelectedId((current) => current ?? next[0]?.id ?? null);
-      })
-      .catch(() => {
+      } catch {
         if (mounted) setRoutines([]);
-      });
+      }
+    };
+    loadWorkout();
+    const unsubscribe = subscribeResourcePack(loadWorkout);
     return () => {
       mounted = false;
+      unsubscribe();
     };
   }, [db]);
 
+  useEffect(() => {
+    if (!timerRunning) return;
+    const timer = setInterval(() => {
+      setRestSeconds((current) => {
+        if (current <= 1) {
+          finishedPlayer.seekTo(0).then(() => finishedPlayer.play()).catch(() => {});
+          setTimerRunning(false);
+          return 0;
+        }
+        if (current === 4) {
+          warningPlayer.seekTo(0).then(() => warningPlayer.play()).catch(() => {});
+        }
+        return current - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [finishedPlayer, timerRunning, warningPlayer]);
+
   const routine =
     routines.find((entry) => entry.id === selectedId) ?? routines[0];
+
+  const changePreset = (direction: number) => {
+    const nextIndex = Math.max(0, Math.min(REST_PRESETS.length - 1, presetIndex + direction));
+    setPresetIndex(nextIndex);
+    setRestSeconds(REST_PRESETS[nextIndex]);
+    setTimerRunning(false);
+  };
+
+  const restartTimer = () => {
+    setRestSeconds(REST_PRESETS[presetIndex]);
+    setTimerRunning(true);
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -270,6 +317,23 @@ export default function WorkoutScreen() {
             </View>
           )}
         </ScrollView>
+        <View style={styles.floatingTimer}>
+          <View style={[styles.timerCircle, { backgroundColor: theme.surface, borderColor: theme.accent }]}>
+            <Pressable onPress={() => changePreset(1)} accessibilityRole="button" accessibilityLabel="Increase rest time" style={styles.timerArrowUp}>
+              <Text style={[styles.timerArrowText, { color: theme.text }]}>▲</Text>
+            </Pressable>
+            <Text style={[styles.timerValue, { color: theme.text }]}>{formatTimer(restSeconds)}</Text>
+            <Pressable onPress={() => changePreset(-1)} accessibilityRole="button" accessibilityLabel="Decrease rest time" style={styles.timerArrowDown}>
+              <Text style={[styles.timerArrowText, { color: theme.text }]}>▼</Text>
+            </Pressable>
+          </View>
+          <Pressable onPress={restartTimer} accessibilityRole="button" accessibilityLabel="Restart rest timer" style={[styles.timerRestart, { backgroundColor: theme.surface, borderColor: theme.accent }]}> 
+            <Text style={[styles.timerRestartText, { color: theme.accent }]}>↻</Text>
+          </Pressable>
+          <Pressable onPress={() => { if (restSeconds === 0) setRestSeconds(REST_PRESETS[presetIndex]); setTimerRunning((running) => !running); }} accessibilityRole="button" accessibilityLabel={timerRunning ? "Pause rest timer" : "Start rest timer"} style={[styles.timerStart, { backgroundColor: theme.accent }]}>
+            <Text style={[styles.timerStartText, { color: theme.onAccent }]}>{timerRunning ? "Ⅱ" : "▶"}</Text>
+          </Pressable>
+        </View>
       </SafeAreaView>
     </View>
   );
@@ -277,6 +341,10 @@ export default function WorkoutScreen() {
 
 function formatPrescription(row: ExerciseRow) {
   return `${row.sets ?? 0} × ${row.duration_seconds ? `${row.duration_seconds} sec` : (row.reps ?? 0)}`;
+}
+
+function formatTimer(seconds: number) {
+  return `${Math.floor(seconds / 60).toString().padStart(2, "0")}:${(seconds % 60).toString().padStart(2, "0")}`;
 }
 
 const styles = StyleSheet.create({
@@ -296,6 +364,16 @@ const styles = StyleSheet.create({
     gap: Spacing.one,
     marginBottom: Spacing.four,
   },
+  floatingTimer: { position: "absolute", right: Spacing.two, bottom: 88, flexDirection: "row", alignItems: "center", gap: 2, padding: 4, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.96)", boxShadow: "0 3px 10px rgba(0,0,0,0.16)" },
+  timerCircle: { width: 48, height: 48, borderRadius: 24, borderWidth: 2, alignItems: "center", justifyContent: "center" },
+  timerValue: { fontSize: 12, lineHeight: 15, fontWeight: "900" },
+  timerArrowUp: { position: "absolute", top: 1, left: 0, right: 0, alignItems: "center", padding: 1 },
+  timerArrowDown: { position: "absolute", bottom: 1, left: 0, right: 0, alignItems: "center", padding: 1 },
+  timerArrowText: { fontSize: 7, lineHeight: 9 },
+  timerRestart: { width: 26, height: 26, borderRadius: 13, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  timerRestartText: { fontSize: 17, lineHeight: 20, fontWeight: "800" },
+  timerStart: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center" },
+  timerStartText: { fontSize: 12, lineHeight: 15, fontWeight: "900" },
   eyebrow: {
     fontSize: 11,
     lineHeight: 15,

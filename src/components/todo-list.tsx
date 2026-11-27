@@ -1,4 +1,4 @@
-import { ComponentRef, useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -34,7 +34,11 @@ function TodoRow({ todo, onToggle, onRemove, showSeparator }: TodoRowProps) {
   const isCard = item.style === "card";
 
   const checkRadius =
-    box.shape === "circle" ? box.size / 2 : box.shape === "rounded" ? box.size * 0.32 : 3;
+    box.shape === "circle"
+      ? box.size / 2
+      : box.shape === "rounded"
+        ? box.size * 0.32
+        : 3;
 
   return (
     <View
@@ -143,22 +147,18 @@ export function TodoList({ list = "home" }: TodoListProps) {
   const submit = () => {
     if (!canAdd) return;
     addTodo(draft);
+    alert(listData);
     setDraft("");
-    inputRef.current?.focus();
   };
 
   const remaining = todos.filter((todo) => !todo.done).length;
   const hasDone = remaining < todos.length;
 
-  const inputRef = useRef<ComponentRef<typeof TextInput>>(null);
-
   useFocusEffect(
     useCallback(() => {
       // A slight delay ensures the screen transition finishes
       // so the keyboard opens reliably (especially on Android)
-      const timeout = setTimeout(() => {
-        inputRef.current?.focus();
-      }, 100);
+      const timeout = setTimeout(() => {}, 100);
 
       return () => clearTimeout(timeout);
     }, []),
@@ -166,7 +166,11 @@ export function TodoList({ list = "home" }: TodoListProps) {
 
   const listData = useMemo<ListEntry[]>(() => {
     if (!tokens.header.sections) {
-      return todos.map((todo) => ({ kind: "todo" as const, key: todo.id, todo }));
+      return todos.map((todo) => ({
+        kind: "todo" as const,
+        key: todo.id,
+        todo,
+      }));
     }
 
     const active = todos.filter((todo) => !todo.done);
@@ -175,14 +179,22 @@ export function TodoList({ list = "home" }: TodoListProps) {
 
     if (active.length > 0) {
       entries.push({ kind: "header", key: "header-active", label: "Today" });
-      active.forEach((todo) => entries.push({ kind: "todo", key: todo.id, todo }));
+      active.forEach((todo) =>
+        entries.push({ kind: "todo", key: todo.id, todo }),
+      );
     }
     if (finished.length > 0) {
       entries.push({ kind: "header", key: "header-done", label: "Done" });
-      finished.forEach((todo) => entries.push({ kind: "todo", key: todo.id, todo }));
+      finished.forEach((todo) =>
+        entries.push({ kind: "todo", key: todo.id, todo }),
+      );
     }
     return entries;
   }, [todos, tokens.header.sections]);
+
+  useEffect(() => {
+    console.log("listData changed:", listData);
+  }, [listData]);
 
   const add = tokens.add;
   const isHairline = add.style === "hairline";
@@ -192,7 +204,9 @@ export function TodoList({ list = "home" }: TodoListProps) {
     fontSize: footer.size,
     lineHeight: footer.size + 5,
     fontWeight: footer.weight,
-    textTransform: (footer.uppercase ? "uppercase" : "none") as "uppercase" | "none",
+    textTransform: (footer.uppercase ? "uppercase" : "none") as
+      | "uppercase"
+      | "none",
   };
 
   return (
@@ -223,7 +237,6 @@ export function TodoList({ list = "home" }: TodoListProps) {
         ]}
       >
         <TextInput
-          ref={inputRef}
           value={draft}
           onChangeText={setDraft}
           onSubmitEditing={submit}
@@ -320,6 +333,9 @@ export function TodoList({ list = "home" }: TodoListProps) {
         ListEmptyComponent={
           <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
             Nothing here yet — your first task goes up top.
+            {listData.map((list) => (
+              <View key={list.key}>{list.key}</View>
+            ))}
           </Text>
         }
       />
@@ -347,7 +363,10 @@ export function TodoList({ list = "home" }: TodoListProps) {
                 <View
                   style={[
                     styles.tag,
-                    { backgroundColor: theme.plus, borderRadius: footer.radius },
+                    {
+                      backgroundColor: theme.plus,
+                      borderRadius: footer.radius,
+                    },
                   ]}
                 >
                   <Text style={[footerText, { color: theme.onPlus }]}>

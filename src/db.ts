@@ -117,6 +117,11 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
       checksum TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS app_meta (
+      key TEXT PRIMARY KEY NOT NULL,
+      value TEXT NOT NULL
+    );
+
     CREATE INDEX IF NOT EXISTS idx_todos_list ON todos(list);
     CREATE INDEX IF NOT EXISTS idx_learn_categories_path ON learn_categories(path_id);
     CREATE INDEX IF NOT EXISTS idx_learn_items_category ON learn_items(category_id);
@@ -126,5 +131,75 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
   const exerciseColumns = await db.getAllAsync<{ name: string }>("PRAGMA table_info(exercises)");
   if (!exerciseColumns.some((column) => column.name === "video_prompt")) {
     await db.execAsync("ALTER TABLE exercises ADD COLUMN video_prompt TEXT");
+  }
+
+  const sampleSeed = await db.getFirstAsync<{ value: string }>(
+    "SELECT value FROM app_meta WHERE key = ?",
+    "sample_todos_v1",
+  );
+  const sampleTodoCount = await db.getFirstAsync<{ count: number }>(
+    "SELECT COUNT(*) as count FROM todos WHERE id IN (?, ?, ?)",
+    "todo-sample-english-grammar",
+    "todo-sample-workout",
+    "todo-sample-reading",
+  );
+  if (!sampleSeed || sampleTodoCount?.count !== 3) {
+    const createdAt = Date.now();
+    await db.withTransactionAsync(async () => {
+      await db.runAsync(
+        "INSERT OR IGNORE INTO todos (id, list, text, done, position, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+        "todo-sample-english-grammar",
+        "home",
+        "Learn English grammar for 10 minutes",
+        0,
+        0,
+        createdAt,
+      );
+      await db.runAsync(
+        "INSERT OR IGNORE INTO todos (id, list, text, done, position, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+        "todo-sample-workout",
+        "Complete Workout Part 1",
+        0,
+        0,
+        createdAt - 1,
+      );
+      await db.runAsync(
+        "INSERT OR IGNORE INTO todos (id, list, text, done, position, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+        "todo-sample-reading",
+        "Read 10 pages",
+        0,
+        0,
+        createdAt - 2,
+      );
+      await db.runAsync(
+        "INSERT OR REPLACE INTO app_meta (key, value) VALUES (?, ?)",
+        "sample_todos_v1",
+        "seeded",
+      );
+    });
+
+    // Links are intentionally added after the todo transaction. This keeps
+    // first-run migration safe even when an older simulator database contains
+    // stale or partially migrated link rows.
+    const sampleLinks = [
+      ["link-todo-sample-english-grammar", "todo-sample-english-grammar", "learn_item", "item-english-grammar"],
+      ["link-todo-sample-workout", "todo-sample-workout", "workout_routine", "routine-workout-part-1"],
+      ["link-todo-sample-reading", "todo-sample-reading", "book", "book-linkadipa-chitthu"],
+    ] as const;
+    for (const [id, todoId, resourceType, resourceId] of sampleLinks) {
+      try {
+        await db.runAsync(
+          "INSERT OR IGNORE INTO todo_links (id, todo_id, resource_type, resource_id) SELECT ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM todos WHERE id = ?)",
+          id,
+          todoId,
+          resourceType,
+          resourceId,
+          todoId,
+        );
+      } catch {
+        // A stale link must never prevent the app from opening. The todo
+        // remains usable and can be linked again from the UI later.
+      }
+    }
   }
 }

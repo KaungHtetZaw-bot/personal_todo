@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { useSQLiteContext } from "expo-sqlite";
+import { subscribeResourcePack } from "@/resource-pack";
 
 export type CategoryNode = {
   id: string;
@@ -140,8 +141,12 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
     }
 
     load().catch(() => {});
+    const unsubscribe = subscribeResourcePack(() => {
+      load().catch(() => {});
+    });
     return () => {
       mounted = false;
+      unsubscribe();
     };
   }, [db]);
 

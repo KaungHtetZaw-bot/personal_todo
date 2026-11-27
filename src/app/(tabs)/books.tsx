@@ -20,6 +20,7 @@ import {
   useDesign,
   useTheme,
 } from "@/theme";
+import { subscribeResourcePack } from "@/resource-pack";
 
 type BookStatus = "reading" | "saved" | "finished";
 type Book = {
@@ -66,28 +67,32 @@ export default function BooksScreen() {
 
   useEffect(() => {
     let mounted = true;
-    db.getAllAsync<BookRow>(
-      `SELECT books.id, books.title, books.author, books.status, books.progress,
-        books.total_pages, books.notes, resource_files.file_name, resource_files.local_path, resource_files.size,
-        cover_files.local_path as cover_local_path
-       FROM books
-       LEFT JOIN resource_files
-         ON resource_files.resource_type = 'book'
-        AND resource_files.resource_id = books.id
-       LEFT JOIN resource_files as cover_files
-         ON cover_files.resource_type = 'book_cover'
-        AND cover_files.resource_id = books.id
-       ORDER BY CASE books.status WHEN 'reading' THEN 0 WHEN 'saved' THEN 1 ELSE 2 END, books.title`,
-    )
-      .then((rows) => {
+    const loadBooks = async () => {
+      try {
+        const rows = await db.getAllAsync<BookRow>(
+          `SELECT books.id, books.title, books.author, books.status, books.progress,
+            books.total_pages, books.notes, resource_files.file_name, resource_files.local_path, resource_files.size,
+            cover_files.local_path as cover_local_path
+           FROM books
+           LEFT JOIN resource_files
+             ON resource_files.resource_type = 'book'
+            AND resource_files.resource_id = books.id
+           LEFT JOIN resource_files as cover_files
+             ON cover_files.resource_type = 'book_cover'
+            AND cover_files.resource_id = books.id
+           ORDER BY CASE books.status WHEN 'reading' THEN 0 WHEN 'saved' THEN 1 ELSE 2 END, books.title`,
+        );
         if (mounted) setBooks(rows.map(toBook));
-      })
-      .catch(() => {
+      } catch {
         if (mounted) setBooks([]);
-      });
+      }
+    };
+    loadBooks();
+    const unsubscribe = subscribeResourcePack(loadBooks);
 
     return () => {
       mounted = false;
+      unsubscribe();
     };
   }, [db]);
 

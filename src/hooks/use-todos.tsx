@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { useSQLiteContext, type SQLiteDatabase } from "expo-sqlite";
+import { subscribeResourcePack } from "@/resource-pack";
 
 export type Todo = {
   id: string;
@@ -49,12 +50,58 @@ export function TodosProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    db.getAllAsync<TodoRow>(
-      "SELECT todos.id, todos.list, todos.text, todos.done, todo_links.resource_type as link_type, todo_links.resource_id as link_resource_id FROM todos LEFT JOIN todo_links ON todo_links.todo_id = todos.id ORDER BY todos.created_at DESC",
-    )
-      .then((rows) => {
-        if (!mounted) return;
-        const next = { ...EMPTY_LISTS };
+    const ensureSampleTodos = async () => {
+      const sampleTodoCount = await db.getFirstAsync<{ count: number }>(
+        "SELECT COUNT(*) as count FROM todos WHERE id IN (?, ?, ?)",
+        "todo-sample-english-grammar",
+        "todo-sample-workout",
+        "todo-sample-reading",
+      );
+      if (sampleTodoCount?.count === 3) return;
+
+      const createdAt = Date.now();
+      await db.withTransactionAsync(async () => {
+        await db.runAsync(
+          "INSERT OR IGNORE INTO todos (id, list, text, done, position, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+          "todo-sample-english-grammar",
+          "home",
+          "Learn English grammar for 10 minutes",
+          0,
+          0,
+          createdAt,
+        );
+        await db.runAsync(
+          "INSERT OR IGNORE INTO todos (id, list, text, done, position, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+          "todo-sample-workout",
+          "home",
+          "Complete Workout Part 1",
+          0,
+          0,
+          createdAt - 1,
+        );
+        await db.runAsync(
+          "INSERT OR IGNORE INTO todos (id, list, text, done, position, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+          "todo-sample-reading",
+          "home",
+          "Read 10 pages",
+          0,
+          0,
+          createdAt - 2,
+        );
+      });
+    };
+
+    const loadTodos = async () => {
+      try {
+        await ensureSampleTodos();
+        const rows = await db.getAllAsync<TodoRow>(
+          "SELECT todos.id, todos.list, todos.text, todos.done, todo_links.resource_type as link_type, todo_links.resource_id as link_resource_id FROM todos LEFT JOIN todo_links ON todo_links.todo_id = todos.id ORDER BY todos.created_at DESC",
+        );
+        if (!mounted) return rows.length;
+        // Create new arrays as well as a new object. A shallow copy of
+        // EMPTY_LISTS would mutate the original home array, leaving memoized
+        // consumers such as TodoList with the old array reference.
+        const next: TodosByList = { home: [], learn: [], workout: [], books: [] };
         rows.forEach((row) => {
           if (row.list in next) {
             next[row.list].push({
@@ -68,11 +115,24 @@ export function TodosProvider({ children }: { children: ReactNode }) {
           }
         });
         setLists(next);
-      })
-      .catch(() => {});
+        return rows.length;
+      } catch {
+        return 0;
+      }
+    };
+
+    void loadTodos().then((count) => {
+      // A first-run migration can finish just after the provider mounts on a
+      // warm development client. Retry once so seeded todos appear immediately.
+      if (count === 0) {
+        setTimeout(() => void loadTodos(), 150);
+      }
+    });
+    const unsubscribe = subscribeResourcePack(() => void loadTodos());
 
     return () => {
       mounted = false;
+      unsubscribe();
     };
   }, [db]);
 
